@@ -1,0 +1,64 @@
+version: '3'
+
+services:
+  horovod-master:
+    image: horovod/horovod:latest
+    container_name: horovod-master
+    command: bash -c "/usr/sbin/sshd -p 12345 && horovodrun -np 3 -H horovod-master:1,horovod-worker-1:1,horovod-worker-2:1 -p 12345 python /horovod/examples/pytorch/pytorch_mnist.py"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    depends_on:
+      - horovod-worker-1
+      - horovod-worker-2
+    environment:
+      - HOROVOD_TIMELINE=/app/timeline.json
+      - HOROVOD_LOG_LEVEL=INFO
+      - HOROVOD_SSH_PORT=12345
+    volumes:
+      - ./tmp/.ssh/:/root/.ssh
+    networks:
+      - horovod-net
+
+  horovod-worker-1:
+    image: horovod/horovod:latest
+    container_name: horovod-worker-1
+    command: bash -c "/usr/sbin/sshd -p 12345 && tail -f /dev/null"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - HOROVOD_SSH_PORT=12345
+    volumes:
+      - ./tmp/.ssh/:/root/.ssh
+    networks:
+      - horovod-net
+
+  horovod-worker-2:
+    image: horovod/horovod:latest
+    container_name: horovod-worker-2
+    command: bash -c "/usr/sbin/sshd -p 12345 && tail -f /dev/null"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - HOROVOD_SSH_PORT=12345
+    volumes:
+      - ./tmp/.ssh/:/root/.ssh
+    networks:
+      - horovod-net
+
+networks:
+  horovod-net:
